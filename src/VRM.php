@@ -4,7 +4,6 @@ namespace Duffleman\VRM;
 
 use Exception;
 use Duffleman\VRM\Validator;
-use function Duffleman\VRM\Formats\gb_2001;
 
 class VRM {
 	public static function coerce(string $input, array $allowedFormats = null) {
@@ -15,7 +14,11 @@ class VRM {
 		if ($allowedFormats !== null) {
 			Validator::validateAllowedFormats($allowedFormats);
 
-			gb_2001('test');
+			array_walk($allowedFormats, function ($format) {
+				if (!class_exists("\\Duffleman\\VRM\\Formats\\$format")) {
+					throw new Exception('allowed_formats_unknown');
+				}
+			});
 		}
 	}
 
