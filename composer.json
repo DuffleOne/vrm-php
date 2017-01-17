@@ -1,6 +1,7 @@
 {
-    "name": "duffleman/vrm-php",
+    "name": "duffleman/vrm",
     "description": "Coerces, validates and prettifies vehicle registration marks (VRMs)",
+    "keywords": ["vrm", "cuvva"],
     "type": "library",
     "license": "MIT",
     "authors": [
