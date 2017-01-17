@@ -18,4 +18,8 @@ class Formats {
 	public static function all() {
 		return self::formats;
 	}
+
+	public static function validateFormat(string $format) {
+		return in_array($format, self::formats);
+	}
 }

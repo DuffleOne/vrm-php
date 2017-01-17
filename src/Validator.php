@@ -37,7 +37,7 @@ class Validator {
 		return $cleaned;
 	}
 
-	private static function validateNormalizedVRM($vrm) {
+	public static function validateNormalizedVRM($vrm) {
 		if (!$vrm) {
 			return false;
 		}

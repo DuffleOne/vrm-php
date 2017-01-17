@@ -57,7 +57,31 @@ class VRM {
 		return $results;
 	}
 
-	public static function info() {}
+	public static function info(string $normalizedVrm, string $format = null) {
+		if (!Validator::validateNormalizedVRM($normalizedVrm))
+			throw new Error('normalized_vrm_invalid');
+
+		if (!is_null($format)) {
+			if (!Formats::validateFormat($format)) {
+				throw new Exception('format_invalid');
+			}
+		}
+
+		$formats = $format ? [$format] : Formats::all();
+
+		foreach ($formats as $fmt) {
+			$className = "\Duffleman\VRM\Formats\\$fmt";
+			$formatter = new $className;
+
+			$details = $formatter->parse($normalizedVrm);
+
+			if ($details) {
+				return self::mapDetails($details, $fmt, $normalizedVrm);
+			}
+
+			return null;
+		}
+	}
 
 	private static function mapDetails(array $details, string $fmt, string $vrm) {
 		return [
