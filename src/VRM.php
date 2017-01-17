@@ -37,10 +37,36 @@ class VRM {
 		$formats = self::getSortedFormats($allowedFormats);
 		$results = [];
 
-		return $combinations;
+		foreach ($formats as $fmt) {
+			$className = "\Duffleman\VRM\Formats\\$fmt";
+			$formatter = new $className;
+
+			foreach ($combinations as $vrm) {
+				$details = $formatter->parse($vrm);
+
+				if (is_null($details)) {
+					continue;
+				}
+
+				$results[] = self::mapDetails($details, $fmt, $vrm);
+			}
+		}
+
+		self::preferVrm($results, $normalized);
+
+		return $results;
 	}
 
 	public static function info() {}
+
+	private static function mapDetails(array $details, string $fmt, string $vrm) {
+		return [
+			'format' => $fmt,
+			'vrm' => $vrm,
+			'_extra' => $details['_extra'],
+			'prettyVrm' => $details['prettyVrm'],
+		];
+	}
 
 	private static function alternatives(string $input) {
 		$substitutable = [];
@@ -111,5 +137,20 @@ class VRM {
 		return array_filter(Formats::all(), function ($format) use($allowedRefs) {
 			return in_array($format, $allowedRefs);
 		});
+	}
+
+	private static function preferVrm(array &$results, string $preferredVrm) {
+		for ($i = 0; $i < count($results); $i++) {
+			$result = $results[$i];
+
+			if ($result['vrm'] !== $preferredVrm) {
+				continue;
+			}
+
+			array_splice($results, $i, 1);
+			array_unshift($results, $result);
+
+			return;
+		}
 	}
 }

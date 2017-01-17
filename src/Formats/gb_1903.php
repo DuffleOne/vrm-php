@@ -3,5 +3,5 @@
 namespace Duffleman\VRM\Formats;
 
 class gb_1903 implements FormatInterface {
-
+	public function parse(string $vrm) {}
 }

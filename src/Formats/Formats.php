@@ -3,27 +3,19 @@
 namespace Duffleman\VRM\Formats;
 
 class Formats {
+	const formats = [
+		'diplomatic',
+		'gb_1903',
+		'gb_1932',
+		'gb_1963',
+		'gb_1983',
+		'gb_2001',
+		'military',
+		'ni_1903',
+		'ni_1966',
+	];
+
 	public static function all() {
-		$files = scandir(__DIR__);
-
-		$files = array_map(function ($fileName) {
-			if (strpos($fileName, '.php') === false) {
-				return $fileName;
-			}
-
-			return str_replace('.php', '', $fileName);
-		}, $files);
-
-		$exceptions = ['.', '..', 'FormatInterface', 'Formats'];
-
-		$files = array_filter($files, function ($file) use ($exceptions) {
-			if (in_array($file, $exceptions)) {
-				return false;
-			}
-
-			return true;
-		});
-
-		return $files;
+		return self::formats;
 	}
 }
