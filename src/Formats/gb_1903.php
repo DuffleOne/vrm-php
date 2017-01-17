@@ -2,6 +2,6 @@
 
 namespace Duffleman\VRM\Formats;
 
-class gb_1903 {
+class gb_1903 implements FormatInterface {
 
 }
