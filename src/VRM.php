@@ -78,9 +78,9 @@ class VRM {
 			if ($details) {
 				return self::mapDetails($details, $fmt, $normalizedVrm);
 			}
-
-			return null;
 		}
+
+		return null;
 	}
 
 	private static function mapDetails(array $details, string $fmt, string $vrm) {
