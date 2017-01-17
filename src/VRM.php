@@ -4,6 +4,7 @@ namespace Duffleman\VRM;
 
 use Exception;
 use Duffleman\VRM\Validator;
+use Duffleman\VRM\Formats\Formats;
 
 class VRM {
 	const equivalent = [
@@ -33,6 +34,8 @@ class VRM {
 		}
 
 		$combinations = self::alternatives($normalized);
+		$formats = self::getSortedFormats($allowedFormats);
+		$results = [];
 
 		return $combinations;
 	}
@@ -99,5 +102,14 @@ class VRM {
 		}
 
 		return $result;
+	}
+
+	private static function getSortedFormats($allowedRefs) {
+		if (!$allowedRefs || empty($allowedRefs))
+			return Formats::all();
+
+		return array_filter(Formats::all(), function ($format) use($allowedRefs) {
+			return in_array($format, $allowedRefs);
+		});
 	}
 }
