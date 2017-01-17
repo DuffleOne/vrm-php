@@ -84,12 +84,7 @@ class VRM {
 	}
 
 	private static function mapDetails(array $details, string $fmt, string $vrm) {
-		return [
-			'format' => $fmt,
-			'vrm' => $vrm,
-			'_extra' => $details['_extra'],
-			'prettyVrm' => $details['prettyVrm'],
-		];
+		return new Mark($vrm, $fmt, $details);
 	}
 
 	private static function alternatives(string $input) {
@@ -167,7 +162,7 @@ class VRM {
 		for ($i = 0; $i < count($results); $i++) {
 			$result = $results[$i];
 
-			if ($result['vrm'] !== $preferredVrm) {
+			if ($result->vrm !== $preferredVrm) {
 				continue;
 			}
 
