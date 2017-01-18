@@ -2,29 +2,31 @@
 
 namespace Duffleman\VRM\Formats;
 
-class diplomatic implements FormatInterface {
-	const validFrom = 1979;
-	const regex = '/^(\d{3})(D|X)(\d{3})$/';
+class diplomatic implements FormatInterface
+{
+    const validFrom = 1979;
+    const regex = '/^(\d{3})(D|X)(\d{3})$/';
 
-	public function parse(string $vrm) {
-		$match = preg_match(self::regex, $vrm, $matchOut);
+    public function parse(string $vrm)
+    {
+        $match = preg_match(self::regex, $vrm, $matchOut);
 
-		if ($match !== 1) {
-			return null;
-		}
+        if ($match !== 1) {
+            return;
+        }
 
-		$entity = intval($matchOut[1], 10);
-		$serial = intval($matchOut[3], 10);
+        $entity = intval($matchOut[1], 10);
+        $serial = intval($matchOut[3], 10);
 
-		array_shift($matchOut);
+        array_shift($matchOut);
 
-		return [
-			'prettyVrm' => implode($matchOut, ' '),
+        return [
+            'prettyVrm' => implode($matchOut, ' '),
 
-			'_extra' => [
-				'entity' => $entity,
-				'serial' => $serial,
-			],
-		];
-	}
+            '_extra' => [
+                'entity' => $entity,
+                'serial' => $serial,
+            ],
+        ];
+    }
 }

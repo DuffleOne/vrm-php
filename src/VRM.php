@@ -2,174 +2,180 @@
 
 namespace Duffleman\VRM;
 
-use Exception;
-use Duffleman\VRM\Validator;
 use Duffleman\VRM\Formats\Formats;
+use Exception;
 
-class VRM {
-	const equivalent = [
-		['0', 'O'],
-		['1', 'I'],
-	];
+class VRM
+{
+    const equivalent = [
+        ['0', 'O'],
+        ['1', 'I'],
+    ];
 
-	public static function coerce(string $input, array $allowedFormats = null) {
-		if (!$input) {
-			throw new Exception('input_invalid');
-		}
+    public static function coerce(string $input, array $allowedFormats = null)
+    {
+        if (!$input) {
+            throw new Exception('input_invalid');
+        }
 
-		if ($allowedFormats !== null) {
-			Validator::validateAllowedFormats($allowedFormats);
+        if ($allowedFormats !== null) {
+            Validator::validateAllowedFormats($allowedFormats);
 
-			array_walk($allowedFormats, function ($format) {
-				if (!class_exists("\\Duffleman\\VRM\\Formats\\$format")) {
-					throw new Exception('allowed_formats_unknown');
-				}
-			});
-		}
+            array_walk($allowedFormats, function ($format) {
+                if (!class_exists("\\Duffleman\\VRM\\Formats\\$format")) {
+                    throw new Exception('allowed_formats_unknown');
+                }
+            });
+        }
 
-		$normalized = Validator::normalize($input);
+        $normalized = Validator::normalize($input);
 
-		if (!$normalized) {
-			return [];
-		}
+        if (!$normalized) {
+            return [];
+        }
 
-		$combinations = self::alternatives($normalized);
-		$formats = self::getSortedFormats($allowedFormats);
-		$results = [];
+        $combinations = self::alternatives($normalized);
+        $formats = self::getSortedFormats($allowedFormats);
+        $results = [];
 
-		foreach ($formats as $fmt) {
-			$className = "\Duffleman\VRM\Formats\\$fmt";
-			$formatter = new $className;
+        foreach ($formats as $fmt) {
+            $className = "\Duffleman\VRM\Formats\\$fmt";
+            $formatter = new $className();
 
-			foreach ($combinations as $vrm) {
-				$details = $formatter->parse($vrm);
+            foreach ($combinations as $vrm) {
+                $details = $formatter->parse($vrm);
 
-				if (is_null($details)) {
-					continue;
-				}
+                if (is_null($details)) {
+                    continue;
+                }
 
-				$results[] = self::mapDetails($details, $fmt, $vrm);
-			}
-		}
+                $results[] = self::mapDetails($details, $fmt, $vrm);
+            }
+        }
 
-		self::preferVrm($results, $normalized);
+        self::preferVrm($results, $normalized);
 
-		return $results;
-	}
+        return $results;
+    }
 
-	public static function info(string $normalizedVrm, string $format = null) {
-		if (!Validator::validateNormalizedVRM($normalizedVrm))
-			throw new Error('normalized_vrm_invalid');
+    public static function info(string $normalizedVrm, string $format = null)
+    {
+        if (!Validator::validateNormalizedVRM($normalizedVrm)) {
+            throw new Error('normalized_vrm_invalid');
+        }
+        if (!is_null($format)) {
+            if (!Formats::validateFormat($format)) {
+                throw new Exception('format_invalid');
+            }
+        }
 
-		if (!is_null($format)) {
-			if (!Formats::validateFormat($format)) {
-				throw new Exception('format_invalid');
-			}
-		}
+        $formats = $format ? [$format] : Formats::all();
 
-		$formats = $format ? [$format] : Formats::all();
+        foreach ($formats as $fmt) {
+            $className = "\Duffleman\VRM\Formats\\$fmt";
+            $formatter = new $className();
 
-		foreach ($formats as $fmt) {
-			$className = "\Duffleman\VRM\Formats\\$fmt";
-			$formatter = new $className;
+            $details = $formatter->parse($normalizedVrm);
 
-			$details = $formatter->parse($normalizedVrm);
+            if ($details) {
+                return self::mapDetails($details, $fmt, $normalizedVrm);
+            }
+        }
+    }
 
-			if ($details) {
-				return self::mapDetails($details, $fmt, $normalizedVrm);
-			}
-		}
+    private static function mapDetails(array $details, string $fmt, string $vrm)
+    {
+        return new Mark($vrm, $fmt, $details);
+    }
 
-		return null;
-	}
+    private static function alternatives(string $input)
+    {
+        $substitutable = [];
+        $substitutes = [];
+        $substituteIndexes = [];
 
-	private static function mapDetails(array $details, string $fmt, string $vrm) {
-		return new Mark($vrm, $fmt, $details);
-	}
+        foreach (self::equivalent as $eq) {
+            foreach ($eq as $char) {
+                $substitutable[] = $char;
+                $substitutes[$char] = $eq;
+            }
+        }
 
-	private static function alternatives(string $input) {
-		$substitutable = [];
-		$substitutes = [];
-		$substituteIndexes = [];
+        for ($i = 0; $i < strlen($input); $i++) {
+            $letter = $input[$i];
 
-		foreach (self::equivalent as $eq) {
-			foreach ($eq as $char) {
-				$substitutable[] = $char;
-				$substitutes[$char] = $eq;
-			}
-		}
+            if (in_array($letter, $substitutable)) {
+                $substituteIndexes[] = $i;
+            }
+        }
 
-		for ($i = 0; $i < strlen($input); $i++) {
-			$letter = $input[$i];
+        if (count($substituteIndexes) <= 0) {
+            return [$input];
+        }
 
-			if (in_array($letter, $substitutable)) {
-				$substituteIndexes[] = $i;
-			}
-		}
+        $sets = array_map(function ($idx) use ($substitutes, $input) {
+            return $substitutes[$input[$idx]];
+        }, $substituteIndexes);
 
-		if (count($substituteIndexes) <= 0) {
-			return [$input];
-		}
+        $combinations = self::cartesianProduct($sets);
+        $splitInput = str_split($input);
 
-		$sets = array_map(function ($idx) use($substitutes, $input) {
-			return $substitutes[$input[$idx]];
-		}, $substituteIndexes);
+        return array_map(function ($combination) use ($splitInput, $substituteIndexes) {
+            $splitString = $splitInput;
 
-		$combinations = self::cartesianProduct($sets);
-		$splitInput = str_split($input);
+            for ($i = 0; $i < count($substituteIndexes); $i++) {
+                $splitString[$substituteIndexes[$i]] = $combination[$i];
+            }
 
-		return array_map(function ($combination) use ($splitInput, $substituteIndexes) {
-			$splitString = $splitInput;
+            return implode('', $splitString);
+        }, $combinations);
+    }
 
-			for ($i = 0; $i < count($substituteIndexes); $i++) {
-				$splitString[$substituteIndexes[$i]] = $combination[$i];
-			}
+    private static function cartesianProduct(array $sets)
+    {
+        $input = array_filter($sets);
+        $result = [[]];
 
-			return implode('', $splitString);
-		}, $combinations);
-	}
+        foreach ($sets as $key => $values) {
+            $append = [];
 
-	private static function cartesianProduct(array $sets) {
-		$input = array_filter($sets);
-		$result = [[]];
+            foreach ($result as $product) {
+                foreach ($values as $item) {
+                    $product[$key] = $item;
+                    $append[] = $product;
+                }
+            }
 
-		foreach ($sets as $key => $values) {
-			$append = [];
+            $result = $append;
+        }
 
-			foreach ($result as $product) {
-				foreach ($values as $item) {
-					$product[$key] = $item;
-					$append[] = $product;
-				}
-			}
+        return $result;
+    }
 
-			$result = $append;
-		}
+    private static function getSortedFormats($allowedRefs)
+    {
+        if (!$allowedRefs || empty($allowedRefs)) {
+            return Formats::all();
+        }
 
-		return $result;
-	}
+        return array_filter(Formats::all(), function ($format) use ($allowedRefs) {
+            return in_array($format, $allowedRefs);
+        });
+    }
 
-	private static function getSortedFormats($allowedRefs) {
-		if (!$allowedRefs || empty($allowedRefs))
-			return Formats::all();
+    private static function preferVrm(array &$results, string $preferredVrm)
+    {
+        for ($i = 0; $i < count($results); $i++) {
+            $result = $results[$i];
 
-		return array_filter(Formats::all(), function ($format) use($allowedRefs) {
-			return in_array($format, $allowedRefs);
-		});
-	}
+            if ($result->vrm !== $preferredVrm) {
+                continue;
+            }
 
-	private static function preferVrm(array &$results, string $preferredVrm) {
-		for ($i = 0; $i < count($results); $i++) {
-			$result = $results[$i];
+            array_splice($results, $i, 1);
+            array_unshift($results, $result);
 
-			if ($result->vrm !== $preferredVrm) {
-				continue;
-			}
-
-			array_splice($results, $i, 1);
-			array_unshift($results, $result);
-
-			return;
-		}
-	}
+            return;
+        }
+    }
 }
